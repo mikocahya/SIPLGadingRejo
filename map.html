@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Leaflet Map dengan Popup dan Label</title>
+    <link
+        rel="stylesheet"
+        href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        crossorigin=""
+    />
+    <style>
+        #map {
+            height: 100vh;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        // Inisialisasi peta dengan koordinat Pringsewu
+        var map = L.map('map').setView([-5.3685, 105.065], 17);
+
+        // Tambahkan basemap satelit (Esri World Imagery)
+        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            attribution: 'Tiles &copy; Esri &mdash; Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community',
+            maxZoom: 19
+        }).addTo(map);
+
+        // URL GeoJSON (local file)
+        var geojsonUrl = "Persil_SIPL_fixed.geojson";
+
+        // Fungsi untuk menambahkan label di centroid
+        function addCentroidLabel(feature, layer) {
+            if (feature.geometry && feature.geometry.type === "Polygon") {
+                // Hitung centroid menggunakan Leaflet
+                var centroid = L.polygon(feature.geometry.coordinates).getBounds().getCenter();
+                
+                // Tambahkan marker di centroid dengan label NAMA
+                var props = feature.properties;
+                if (props.NAMA) {
+                    L.marker(centroid, {
+                        icon: L.divIcon({
+                            className: 'label-icon',
+                            html: `<div style="font-size:10px; color:white; background-color:rgba(0,0,0,0.5); padding:2px; border-radius:3px;">${props.NAMA}</div>`,
+                            iconSize: [80, 20],
+                            iconAnchor: [40, 10]
+                        })
+                    }).addTo(map);
+                }
+            }
+        }
+
+        // Load GeoJSON dengan XHR
+        var xhr = new XMLHttpRequest();
+        xhr.open('GET', geojsonUrl, true);
+        xhr.onreadystatechange = function () {
+            if (xhr.readyState === 4) {
+                if (xhr.status === 200) {
+                    var geojsonData = JSON.parse(xhr.responseText);
+                    L.geoJSON(geojsonData, {
+                        onEachFeature: function (feature, layer) {
+                            // Tambahkan popup
+                            var props = feature.properties;
+                            var popupContent = `
+                                <b>NIB:</b> ${props.NIB || "Tidak Ada"}<br>
+                                <b>Nama:</b> ${props.NAMA || "Tidak Ada"}<br>
+                                <b>LUAS:</b> ${props.LUAS || "Tidak Ada"}<br>
+                                <b>NJOP:</b> ${props.NJOP || "Tidak Ada"}
+                            `;
+                            layer.bindPopup(popupContent);
+
+                            // Tambahkan label centroid
+                            addCentroidLabel(feature, layer);
+                        }
+                    }).addTo(map);
+                } else {
+                    console.error("Error loading GeoJSON:", xhr.status);
+                }
+            }
+        };
+        xhr.send();
+    </script>
+</body>
+</html>
